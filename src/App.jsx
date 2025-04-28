@@ -14,17 +14,17 @@ function Square({ value, onSquareClick, isWinningSquare }) {
 
 function Board({ xIsNext, squares, onPlay }) {
     function handleClick(i) {
-        if (calculateWinner(squares) || squares[i]) {
+        if (calculateWinner(squares).winner || squares[i]) {
             return;
         }
 
         const nextSquares = squares.slice();
-        if (xIsNext) {
-            nextSquares[i] = "X";
-        } else {
-            nextSquares[i] = "O";
-        }
-        onPlay(nextSquares);
+        nextSquares[i] = xIsNext ? "X" : "O";
+
+        const row = Math.floor(i / 3) + 1;
+        const col = (i % 3) + 1;
+
+        onPlay(nextSquares, { row, col });
     }
 
     const result = calculateWinner(squares);
@@ -80,14 +80,17 @@ function Board({ xIsNext, squares, onPlay }) {
 }
 
 export default function Game() {
-    const [history, setHistory] = useState([Array(9).fill(null)]);
+    const [history, setHistory] = useState([
+        { squares: Array(9).fill(null), clickedSquare: null }
+    ]);
     const [currentMove, setCurrentMove] = useState(0);
     const [isAscending, setIsAscending] = useState(true);
-    const xIsNext = currentMove % 2 === 0;
-    const currentSquares = history[currentMove];
 
-    function handlePlay(nextSquares) {
-        const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
+    const xIsNext = currentMove % 2 === 0;
+    const currentSquares = history[currentMove].squares;
+
+    function handlePlay(nextSquares, clickedSquare) {
+        const nextHistory = [...history.slice(0, currentMove + 1), { squares: nextSquares, clickedSquare }];
         setHistory(nextHistory);
         setCurrentMove(nextHistory.length - 1);
     }
@@ -101,20 +104,27 @@ export default function Game() {
         let description;
 
         if (move > 0) {
-            description = 'Go to move #' + move;
+            const { row, col } = squares.clickedSquare;
+            description = `Go to move #${move} (row: ${row}, col: ${col})`;
         } else {
             description = 'Go to game start';
         }
 
         return (
             <li key={move}>
-                {isCurrentMove ? (
-                    <span className='current-move'>
-                        {move === 0 ? 'You are at game start' : `You are at move #${move}`}
-                    </span>
-                ) : (
-                    <button onClick={() => jumpTo(move)}>{description}</button>
-                )}
+                {isCurrentMove
+                    ? (
+                        <span className='current-move'>
+                            {move === 0
+                                ? 'You are at game start'
+                                : `You are at move #${move} (row: ${squares.clickedSquare?.row}, col: ${squares.clickedSquare?.col})`
+                            }
+                        </span>
+                    )
+                    : (
+                        <button onClick={() => jumpTo(move)}>{description}</button>
+                    )
+                }
             </li>
         );
     });
@@ -156,5 +166,5 @@ function calculateWinner(squares) {
         }
     }
 
-    return null;
+    return { winner: null, winningLine: [] };
 }
